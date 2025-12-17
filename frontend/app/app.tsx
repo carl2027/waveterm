@@ -1,6 +1,7 @@
 // Copyright 2025, Command Line Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+import { modalsModel } from "@/app/store/modalmodel";
 import { Workspace } from "@/app/workspace/workspace";
 import { ContextMenuModel } from "@/store/contextmenu";
 import { atoms, createBlock, getSettingsPrefixAtom, globalStore, isDev, removeFlashError } from "@/store/global";
@@ -88,7 +89,8 @@ async function handleContextMenu(e: React.MouseEvent<HTMLDivElement>) {
     const canCopy = canEnableCopy();
     const canCut = canEnableCut();
     const clipboardURL = await getClipboardURL();
-    if (!canPaste && !canCopy && !canCut && !clipboardURL) {
+    const selectedText = window.getSelection()?.toString().trim();
+    if (!canPaste && !canCopy && !canCut && !clipboardURL && !selectedText) {
         return;
     }
     let menu: ContextMenuItem[] = [];
@@ -112,6 +114,17 @@ async function handleContextMenu(e: React.MouseEvent<HTMLDivElement>) {
                         url: clipboardURL.toString(),
                     },
                 });
+            },
+        });
+    }
+    if (selectedText) {
+        if (menu.length > 0) {
+            menu.push({ type: "separator" });
+        }
+        menu.push({
+            label: "Ask AI about selection",
+            click: () => {
+                modalsModel.pushModal("AIChatModal", { initialText: selectedText });
             },
         });
     }
