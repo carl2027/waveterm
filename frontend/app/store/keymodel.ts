@@ -24,17 +24,19 @@ import { TabBarModel } from "@/app/tab/tabbar-model";
 import { WorkspaceLayoutModel } from "@/app/workspace/workspace-layout-model";
 import { deleteLayoutModelForTab, getLayoutModelForStaticTab, NavigateDirection } from "@/layout/index";
 import * as keyutil from "@/util/keyutil";
-import { isWindows } from "@/util/platformutil";
+import { isWindows, PLATFORM, PlatformMacOS } from "@/util/platformutil";
 import { CHORD_TIMEOUT } from "@/util/sharedconst";
 import { fireAndForget } from "@/util/util";
 import * as jotai from "jotai";
 import { modalsModel } from "./modalmodel";
 
 type KeyHandler = (event: WaveKeyboardEvent) => boolean;
+type MouseHandler = (event: MouseEvent, target: EventTarget | null) => boolean;
 
 const simpleControlShiftAtom = jotai.atom(false);
 const globalKeyMap = new Map<string, (waveEvent: WaveKeyboardEvent) => boolean>();
 const globalChordMap = new Map<string, Map<string, KeyHandler>>();
+const globalMouseMap = new Map<string, MouseHandler>();
 let globalKeybindingsDisabled = false;
 
 // track current chord state and timeout (for resetting)
@@ -58,9 +60,64 @@ function setActiveChord(activeChordArg: string) {
     chordTimeout = setTimeout(() => resetChord(), CHORD_TIMEOUT);
 }
 
+/**
+ * Generate a mouse event description string from a MouseEvent.
+ * Format: "修饰键:修饰键:Click" (e.g., "Cmd:Click", "Shift:Cmd:Click", "Ctrl:Click")
+ * Cmd is cross-platform: macOS uses Meta key, Windows/Linux use Alt key.
+ */
+function mouseEventToDescription(e: MouseEvent): string {
+    const parts: string[] = [];
+
+    // Check modifiers in a consistent order
+    // Cmd is cross-platform: macOS uses Meta, Windows/Linux use Alt
+    const cmdKey = PLATFORM == PlatformMacOS ? e.metaKey : e.altKey;
+    if (cmdKey) {
+        parts.push("Cmd");
+    }
+    if (e.shiftKey) {
+        parts.push("Shift");
+    }
+    if (e.ctrlKey) {
+        parts.push("Ctrl");
+    }
+    // Only add Alt if it's not already used as Cmd
+    if (e.altKey && PLATFORM == PlatformMacOS) {
+        parts.push("Alt");
+    }
+    // Only add Meta if it's not already used as Cmd (Windows/Linux)
+    if (e.metaKey && PLATFORM != PlatformMacOS) {
+        parts.push("Meta");
+    }
+
+    // Add the mouse button/action
+    parts.push("Click");
+
+    return parts.join(":");
+}
+
+/**
+ * Handle mouse down events, checking for registered mouse shortcuts.
+ */
 export function keyboardMouseDownHandler(e: MouseEvent) {
+    // Handle Ctrl+Shift state (existing functionality)
     if (!e.ctrlKey || !e.shiftKey) {
         unsetControlShift();
+    }
+
+    // Check for registered mouse shortcuts
+    if (globalKeybindingsDisabled) {
+        return;
+    }
+
+    const mouseDesc = mouseEventToDescription(e);
+    const handler = globalMouseMap.get(mouseDesc);
+
+    if (handler) {
+        const handled = handler(e, e.target);
+        if (handled) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
     }
 }
 
@@ -546,6 +603,39 @@ function registerGlobalKeys() {
         }
         return true;
     });
+
+    // Register mouse click to toggle magnify on the clicked block
+    // Support both Cmd+Click and Alt+Click on all platforms
+    const handleMagnifyClick = (e: MouseEvent, target: EventTarget | null) => {
+        if (target == null) {
+            return false;
+        }
+        // Find the block element (look for data-blockid attribute)
+        let element = target as HTMLElement;
+        while (element && element !== document.body) {
+            const blockId = element.getAttribute?.("data-blockid");
+            if (blockId) {
+                const layoutModel = getLayoutModelForStaticTab();
+                if (layoutModel == null) {
+                    return false;
+                }
+                const leafOrder = globalStore.get(layoutModel.leafOrder);
+                const clickedNode = leafOrder.find((entry) => entry.blockid === blockId);
+                if (clickedNode != null) {
+                    layoutModel.magnifyNodeToggle(clickedNode.nodeid);
+                    return true;
+                }
+                return false;
+            }
+            element = element.parentElement as HTMLElement;
+        }
+        return false;
+    };
+
+    // Register both shortcuts on all platforms
+    globalMouseMap.set("Cmd:Click", handleMagnifyClick);
+    globalMouseMap.set("Alt:Click", handleMagnifyClick);
+
     globalKeyMap.set("Ctrl:Shift:ArrowUp", () => {
         switchBlockInDirection(NavigateDirection.Up);
         return true;
