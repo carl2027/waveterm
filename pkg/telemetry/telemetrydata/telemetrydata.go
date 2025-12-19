@@ -81,11 +81,12 @@ type TEventUserProps struct {
 	LocCountryCode string `json:"loc:countrycode,omitempty"`
 	LocRegionCode  string `json:"loc:regioncode,omitempty"`
 
-	SettingsCustomWidgets   int `json:"settings:customwidgets,omitempty"`
-	SettingsCustomAIPresets int `json:"settings:customaipresets,omitempty"`
-	SettingsCustomSettings  int `json:"settings:customsettings,omitempty"`
-	SettingsCustomAIModes   int `json:"settings:customaimodes,omitempty"`
-	SettingsSecretsCount    int `json:"settings:secretscount,omitempty"`
+	SettingsCustomWidgets   int  `json:"settings:customwidgets,omitempty"`
+	SettingsCustomAIPresets int  `json:"settings:customaipresets,omitempty"`
+	SettingsCustomSettings  int  `json:"settings:customsettings,omitempty"`
+	SettingsCustomAIModes   int  `json:"settings:customaimodes,omitempty"`
+	SettingsSecretsCount    int  `json:"settings:secretscount,omitempty"`
+	SettingsTransparent     bool `json:"settings:transparent,omitempty"`
 }
 
 type TEventProps struct {
@@ -105,6 +106,7 @@ type TEventProps struct {
 	ActionType      string `json:"action:type,omitempty"`
 	PanicType       string `json:"debug:panictype,omitempty"`
 	BlockView       string `json:"block:view,omitempty"`
+	BlockController string `json:"block:controller,omitempty"`
 	AiBackendType   string `json:"ai:backendtype,omitempty"`
 	AiLocal         bool   `json:"ai:local,omitempty"`
 	WshCmd          string `json:"wsh:cmd,omitempty"`

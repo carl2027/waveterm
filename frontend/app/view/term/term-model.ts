@@ -26,6 +26,7 @@ import {
 } from "@/store/global";
 import * as services from "@/store/services";
 import * as keyutil from "@/util/keyutil";
+import { isMacOS, isWindows } from "@/util/platformutil";
 import { boundNumber, stringToBase64 } from "@/util/util";
 import * as jotai from "jotai";
 import * as React from "react";
@@ -488,12 +489,67 @@ export class TermViewModel implements ViewModel {
             this.setTermMode(newTermMode);
             return true;
         }
+        if (keyutil.checkKeyPressed(waveEvent, "Shift:End")) {
+            if (this.termRef?.current?.terminal) {
+                this.termRef.current.terminal.scrollToBottom();
+            }
+            return true;
+        }
+        if (keyutil.checkKeyPressed(waveEvent, "Shift:Home")) {
+            if (this.termRef?.current?.terminal) {
+                this.termRef.current.terminal.scrollToLine(0);
+            }
+            return true;
+        }
+        if (isMacOS() && keyutil.checkKeyPressed(waveEvent, "Cmd:End")) {
+            if (this.termRef?.current?.terminal) {
+                this.termRef.current.terminal.scrollToBottom();
+            }
+            return true;
+        }
+        if (isMacOS() && keyutil.checkKeyPressed(waveEvent, "Cmd:Home")) {
+            if (this.termRef?.current?.terminal) {
+                this.termRef.current.terminal.scrollToLine(0);
+            }
+            return true;
+        }
+        if (keyutil.checkKeyPressed(waveEvent, "Shift:PageDown")) {
+            if (this.termRef?.current?.terminal) {
+                this.termRef.current.terminal.scrollPages(1);
+            }
+            return true;
+        }
+        if (keyutil.checkKeyPressed(waveEvent, "Shift:PageUp")) {
+            if (this.termRef?.current?.terminal) {
+                this.termRef.current.terminal.scrollPages(-1);
+            }
+            return true;
+        }
         const blockData = globalStore.get(this.blockAtom);
         if (blockData.meta?.["term:mode"] == "vdom") {
             const vdomModel = this.getVDomModel();
             return vdomModel?.keyDownHandler(waveEvent);
         }
         return false;
+    }
+
+    shouldHandleCtrlVPaste(): boolean {
+        // macOS never uses Ctrl-V for paste (uses Cmd-V)
+        if (isMacOS()) {
+            return false;
+        }
+
+        // Get the app:ctrlvpaste setting
+        const ctrlVPasteAtom = getSettingsKeyAtom("app:ctrlvpaste");
+        const ctrlVPasteSetting = globalStore.get(ctrlVPasteAtom);
+
+        // If setting is explicitly set, use it
+        if (ctrlVPasteSetting != null) {
+            return ctrlVPasteSetting;
+        }
+
+        // Default behavior: Windows=true, Linux/other=false
+        return isWindows();
     }
 
     handleTerminalKeydown(event: KeyboardEvent): boolean {
@@ -525,6 +581,15 @@ export class TermViewModel implements ViewModel {
                 return false;
             }
         }
+
+        // Check for Ctrl-V paste (platform-dependent)
+        if (this.shouldHandleCtrlVPaste() && keyutil.checkKeyPressed(waveEvent, "Ctrl:v")) {
+            event.preventDefault();
+            event.stopPropagation();
+            getApi().nativePaste();
+            return false;
+        }
+
         if (keyutil.checkKeyPressed(waveEvent, "Ctrl:Shift:v")) {
             event.preventDefault();
             event.stopPropagation();

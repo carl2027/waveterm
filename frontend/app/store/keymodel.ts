@@ -15,6 +15,7 @@ import {
     getFocusedBlockId,
     getSettingsKeyAtom,
     globalStore,
+    recordTEvent,
     refocusNode,
     replaceBlock,
     WOS,
@@ -23,7 +24,7 @@ import { TabBarModel } from "@/app/tab/tabbar-model";
 import { WorkspaceLayoutModel } from "@/app/workspace/workspace-layout-model";
 import { deleteLayoutModelForTab, getLayoutModelForStaticTab, NavigateDirection } from "@/layout/index";
 import * as keyutil from "@/util/keyutil";
-import { PLATFORM, PlatformMacOS } from "@/util/platformutil";
+import { isWindows, PLATFORM, PlatformMacOS } from "@/util/platformutil";
 import { CHORD_TIMEOUT } from "@/util/sharedconst";
 import { fireAndForget } from "@/util/util";
 import * as jotai from "jotai";
@@ -203,7 +204,7 @@ function uxCloseBlock(blockId: string) {
     const isAIPanelOpen = workspaceLayoutModel.getAIPanelVisible();
     if (isAIPanelOpen && getStaticTabBlockCount() === 1) {
         const aiModel = WaveAIModel.getInstance();
-        const shouldSwitchToAI = !aiModel.isChatEmpty || aiModel.hasNonEmptyInput();
+        const shouldSwitchToAI = !globalStore.get(aiModel.isChatEmptyAtom) || aiModel.hasNonEmptyInput();
         if (shouldSwitchToAI) {
             replaceBlock(blockId, { meta: { view: "launcher" } }, false);
             setTimeout(() => WaveAIModel.getInstance().focusInput(), 50);
@@ -241,7 +242,7 @@ function genericClose() {
     const isAIPanelOpen = workspaceLayoutModel.getAIPanelVisible();
     if (isAIPanelOpen && getStaticTabBlockCount() === 1) {
         const aiModel = WaveAIModel.getInstance();
-        const shouldSwitchToAI = !aiModel.isChatEmpty || aiModel.hasNonEmptyInput();
+        const shouldSwitchToAI = !globalStore.get(aiModel.isChatEmptyAtom) || aiModel.hasNonEmptyInput();
         if (shouldSwitchToAI) {
             const layoutModel = getLayoutModelForStaticTab();
             const focusedNode = globalStore.get(layoutModel.focusedNode);
@@ -670,6 +671,7 @@ function registerGlobalKeys() {
     globalKeyMap.set("Cmd:g", () => {
         const bcm = getBlockComponentModel(getFocusedBlockInStaticTab());
         if (bcm.openSwitchConnection != null) {
+            recordTEvent("action:other", { "action:type": "conndropdown", "action:initiator": "keyboard" });
             bcm.openSwitchConnection();
             return true;
         }
@@ -697,14 +699,25 @@ function registerGlobalKeys() {
             return true;
         });
     }
-    globalKeyMap.set("Ctrl:Shift:c{Digit0}", () => {
-        WaveAIModel.getInstance().focusInput();
-        return true;
-    });
-    globalKeyMap.set("Ctrl:Shift:c{Numpad0}", () => {
-        WaveAIModel.getInstance().focusInput();
-        return true;
-    });
+    if (isWindows()) {
+        globalKeyMap.set("Alt:c{Digit0}", () => {
+            WaveAIModel.getInstance().focusInput();
+            return true;
+        });
+        globalKeyMap.set("Alt:c{Numpad0}", () => {
+            WaveAIModel.getInstance().focusInput();
+            return true;
+        });
+    } else {
+        globalKeyMap.set("Ctrl:Shift:c{Digit0}", () => {
+            WaveAIModel.getInstance().focusInput();
+            return true;
+        });
+        globalKeyMap.set("Ctrl:Shift:c{Numpad0}", () => {
+            WaveAIModel.getInstance().focusInput();
+            return true;
+        });
+    }
     function activateSearch(event: WaveKeyboardEvent): boolean {
         const bcm = getBlockComponentModel(getFocusedBlockInStaticTab());
         // Ctrl+f is reserved in most shells

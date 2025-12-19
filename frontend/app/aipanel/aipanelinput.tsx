@@ -24,9 +24,19 @@ export interface AIPanelInputRef {
 export const AIPanelInput = memo(({ onSubmit, status, model }: AIPanelInputProps) => {
     const [input, setInput] = useAtom(model.inputAtom);
     const isFocused = useAtomValue(model.isWaveAIFocusedAtom);
+    const isChatEmpty = useAtomValue(model.isChatEmptyAtom);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const isPanelOpen = useAtomValue(model.getPanelVisibleAtom());
+
+    let placeholder: string;
+    if (!isChatEmpty) {
+        placeholder = "Continue...";
+    } else if (model.inBuilder) {
+        placeholder = "What would you like to build...";
+    } else {
+        placeholder = "Ask Wave AI anything...";
+    }
 
     const resizeTextarea = useCallback(() => {
         const textarea = textareaRef.current;
@@ -68,17 +78,20 @@ export const AIPanelInput = memo(({ onSubmit, status, model }: AIPanelInputProps
         model.requestWaveAIFocus();
     }, [model]);
 
-    const handleBlur = useCallback((e: React.FocusEvent) => {
-        if (e.relatedTarget === null) {
-            return;
-        }
+    const handleBlur = useCallback(
+        (e: React.FocusEvent) => {
+            if (e.relatedTarget === null) {
+                return;
+            }
 
-        if (waveAIHasFocusWithin(e.relatedTarget)) {
-            return;
-        }
+            if (waveAIHasFocusWithin(e.relatedTarget)) {
+                return;
+            }
 
-        model.requestNodeFocus();
-    }, [model]);
+            model.requestNodeFocus();
+        },
+        [model]
+    );
 
     useEffect(() => {
         resizeTextarea();
@@ -138,10 +151,9 @@ export const AIPanelInput = memo(({ onSubmit, status, model }: AIPanelInputProps
                         onKeyDown={handleKeyDown}
                         onFocus={handleFocus}
                         onBlur={handleBlur}
-                        placeholder={model.inBuilder ? "What would you like to build..." : "Ask Wave AI anything..."}
+                        placeholder={placeholder}
                         className={cn(
-                            "w-full  text-white px-2 py-2 pr-5 focus:outline-none resize-none overflow-auto",
-                            isFocused ? "bg-accent-900/50" : "bg-gray-800"
+                            "w-full  text-white px-2 py-2 pr-5 focus:outline-none resize-none overflow-auto bg-zinc-800/50"
                         )}
                         style={{ fontSize: "13px" }}
                         rows={2}

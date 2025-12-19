@@ -1082,6 +1082,7 @@ declare global {
         "term:disablewebgl"?: boolean;
         "term:localshellpath"?: string;
         "term:localshellopts"?: string[];
+        "term:gitbashpath"?: string;
         "term:scrollback"?: number;
         "term:copyonselect"?: boolean;
         "term:transparency"?: number;
@@ -1221,6 +1222,7 @@ declare global {
         "settings:customsettings"?: number;
         "settings:customaimodes"?: number;
         "settings:secretscount"?: number;
+        "settings:transparent"?: boolean;
         "activity:activeminutes"?: number;
         "activity:fgminutes"?: number;
         "activity:openminutes"?: number;
@@ -1305,6 +1307,7 @@ declare global {
         "settings:customsettings"?: number;
         "settings:customaimodes"?: number;
         "settings:secretscount"?: number;
+        "settings:transparent"?: boolean;
     };
 
     // waveobj.Tab
