@@ -25,8 +25,7 @@ import { ErrorBoundary } from "@/element/errorboundary";
 import { IconButton, ToggleIconButton } from "@/element/iconbutton";
 import { MagnifyIcon } from "@/element/magnify";
 import { MenuButton } from "@/element/menubutton";
-import { getLayoutModelForStaticTab, NodeModel } from "@/layout/index";
-import { isMacOS } from "@/util/platformutil";
+import { NodeModel } from "@/layout/index";
 import * as util from "@/util/util";
 import { makeIconClass } from "@/util/util";
 import { computeBgStyleFromMeta } from "@/util/waveutil";
@@ -614,24 +613,6 @@ const BlockFrame_Default_Component = (props: BlockFrameProps) => {
         }
     }, [manageConnection, blockData]);
 
-    const handleBlockClick = React.useCallback(
-        (e: React.MouseEvent<HTMLDivElement>) => {
-            // Check for modifier keys: Cmd+Shift+Click on macOS, Alt+Shift+Click on Windows/Linux
-            const isModifierPressed = isMacOS() ? e.metaKey && e.shiftKey : e.altKey && e.shiftKey;
-            if (isModifierPressed && !preview) {
-                // Trigger magnify toggle
-                const layoutModel = getLayoutModelForStaticTab();
-                layoutModel.magnifyNodeToggle(nodeModel.nodeId);
-                e.preventDefault();
-                e.stopPropagation();
-                return;
-            }
-            // Otherwise, call the original onClick handler
-            blockModel?.onClick?.();
-        },
-        [blockModel, nodeModel.nodeId, preview]
-    );
-
     const viewIconElem = getViewIconElem(viewIconUnion, blockData);
     let innerStyle: React.CSSProperties = {};
     if (!preview) {
@@ -652,7 +633,7 @@ const BlockFrame_Default_Component = (props: BlockFrameProps) => {
                 magnified: isMagnified,
             })}
             data-blockid={nodeModel.blockId}
-            onClick={handleBlockClick}
+            onClick={blockModel?.onClick}
             onFocusCapture={blockModel?.onFocusCapture}
             ref={blockModel?.blockRef}
             style={
