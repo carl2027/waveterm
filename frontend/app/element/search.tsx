@@ -27,8 +27,8 @@ const SearchComponent = ({
     caseSensitive: caseSensitiveAtom,
     wholeWord: wholeWordAtom,
     isOpen: isOpenAtom,
-    searchInputRef: providedInputRef,
     anchorRef,
+    searchInputRef: providedInputRef,
     offsetX = 10,
     offsetY = 10,
     onSearch,
@@ -189,7 +189,6 @@ export const Search = memo(SearchComponent) as typeof SearchComponent;
 
 type SearchOptions = {
     anchorRef?: React.RefObject<HTMLElement>;
-    searchInputRef?: React.RefObject<HTMLInputElement>;
     viewModel?: ViewModel;
     regex?: boolean;
     caseSensitive?: boolean;
@@ -210,19 +209,19 @@ export function useSearch(options?: SearchOptions): SearchProps {
         []
     );
     const anchorRef = options?.anchorRef ?? useRef(null);
-    const searchInputRef = options?.searchInputRef ?? useRef(null);
+    const inputRef = useRef<HTMLInputElement>(null);
     useEffect(() => {
         if (options?.viewModel) {
             options.viewModel.searchAtoms = searchAtoms;
-            // Store searchInputRef on viewModel for external access (e.g., keymodel.ts)
-            (options.viewModel as any).searchInputRef = searchInputRef;
+            // Store inputRef on viewModel for external access (e.g., keymodel.ts)
+            (options.viewModel as any).searchInputRef = inputRef;
             return () => {
                 options.viewModel.searchAtoms = undefined;
                 (options.viewModel as any).searchInputRef = undefined;
             };
         }
-    }, [options?.viewModel]);
-    return { ...searchAtoms, anchorRef, searchInputRef };
+    }, [options?.viewModel, searchAtoms]);
+    return { ...searchAtoms, anchorRef, searchInputRef: inputRef };
 }
 
 const createToggleButtonDecl = (
