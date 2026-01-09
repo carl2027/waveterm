@@ -154,7 +154,9 @@
             }
 
             &::-webkit-scrollbar-track {
+                // Make track slightly transparent so search match indicators are visible
                 background-color: var(--scrollbar-background-color);
+                opacity: 0.4; // Allow search match indicators to show through
             }
 
             &::-webkit-scrollbar-thumb {
@@ -176,6 +178,18 @@
         &:hover {
             .xterm-viewport::-webkit-scrollbar-thumb {
                 display: block;
+            }
+        }
+    }
+
+    // Search match indicator styles
+    .search-match-indicator {
+        .search-match-marker {
+            // Ensure markers are visible even when scrollbar is over them
+            box-shadow: 0 0 2px rgba(255, 255, 0, 0.5);
+
+            &.active {
+                box-shadow: 0 0 3px rgba(255, 150, 50, 0.7);
             }
         }
     }
