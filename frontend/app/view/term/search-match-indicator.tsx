@@ -23,6 +23,26 @@ const SearchMatchIndicator: React.FC<SearchMatchIndicatorProps> = ({
 }) => {
     const [matchLines, setMatchLines] = React.useState<number[]>([]);
     const indicatorRef = React.useRef<HTMLDivElement>(null);
+    const [cols, setCols] = React.useState<number>(terminal?.cols ?? 80);
+
+    // Listen for terminal resize events to recalculate positions when width changes
+    React.useEffect(() => {
+        if (!terminal) return;
+
+        // Initialize cols
+        setCols(terminal.cols);
+
+        // Listen for resize events
+        // onResize returns a disposable object that can be used to unsubscribe
+        const disposable = terminal.onResize(() => {
+            setCols(terminal.cols);
+        });
+
+        return () => {
+            // Cleanup: dispose the event listener
+            disposable.dispose();
+        };
+    }, [terminal]);
 
     // Find all matching lines
     React.useEffect(() => {
@@ -127,13 +147,52 @@ const SearchMatchIndicator: React.FC<SearchMatchIndicatorProps> = ({
 
     const buffer = terminal.buffer.active;
     const totalLines = buffer.length;
+    // Use state cols to trigger recalculation when width changes
+    const currentCols = cols;
 
-    // Calculate the position of each match marker
+    // Calculate visual line positions considering line wrapping
+    // Each buffer line may wrap to multiple visual lines if it exceeds terminal width
+    const calculateVisualLinePosition = (bufferLineIndex: number): number => {
+        let visualLineCount = 0;
+
+        // Count visual lines for all buffer lines up to and including the target line
+        for (let i = 0; i <= bufferLineIndex; i++) {
+            const line = buffer.getLine(i);
+            if (line) {
+                const lineLength = line.length;
+                // Calculate how many visual lines this buffer line occupies
+                // Each visual line can hold 'currentCols' characters
+                const visualLinesForThisLine = Math.max(1, Math.ceil(lineLength / currentCols));
+                visualLineCount += visualLinesForThisLine;
+            } else {
+                // Empty line still takes one visual line
+                visualLineCount += 1;
+            }
+        }
+
+        return visualLineCount;
+    };
+
+    // Calculate total visual lines in the buffer
+    let totalVisualLines = 0;
+    for (let i = 0; i < totalLines; i++) {
+        const line = buffer.getLine(i);
+        if (line) {
+            const lineLength = line.length;
+            totalVisualLines += Math.max(1, Math.ceil(lineLength / currentCols));
+        } else {
+            totalVisualLines += 1;
+        }
+    }
+
+    // Calculate the position of each match marker based on visual lines
     const markers = matchLines.map((line, index) => {
         // Convert scrollback line to buffer line
         const bufferLine = totalLines - 1 - line;
-        // Calculate position as percentage (0 = top, 100 = bottom)
-        const position = totalLines > 1 ? (bufferLine / (totalLines - 1)) * 100 : 50;
+        // Calculate visual line position for this buffer line
+        const visualLinePosition = calculateVisualLinePosition(bufferLine);
+        // Calculate position as percentage based on visual lines (0 = top, 100 = bottom)
+        const position = totalVisualLines > 1 ? ((visualLinePosition - 1) / (totalVisualLines - 1)) * 100 : 50;
         return { line, position, bufferLine, originalIndex: index };
     });
 
@@ -210,7 +269,7 @@ const SearchMatchIndicator: React.FC<SearchMatchIndicatorProps> = ({
             }}
         >
             {mergedBlocks.map((block, blockIndex) => {
-                const topPosition = Math.max(0, Math.min(100, block.startPosition));
+                const topPosition = Math.max(0, Math.min(100, block.startPosition)) - 0.0;
                 const matchCount = block.endIndex - block.startIndex + 1;
                 const isActive = block.containsActive;
                 // Use fixed height: 3px for single match, 4px for multiple matches
