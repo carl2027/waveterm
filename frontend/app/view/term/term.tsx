@@ -331,16 +331,53 @@ const TerminalView = ({ blockId, model }: ViewComponentProps<TermViewModel>) => 
     }, [isMI, isBasicTerm, isFocused]);
 
     const scrollbarHideObserverRef = React.useRef<HTMLDivElement>(null);
+    const scrollTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
     const onScrollbarShowObserver = React.useCallback(() => {
         const termViewport = viewRef.current.getElementsByClassName("xterm-viewport")[0] as HTMLDivElement;
         termViewport.style.zIndex = "var(--zindex-xterm-viewport-overlay)";
         scrollbarHideObserverRef.current.style.display = "block";
     }, []);
+
     const onScrollbarHideObserver = React.useCallback(() => {
         const termViewport = viewRef.current.getElementsByClassName("xterm-viewport")[0] as HTMLDivElement;
         termViewport.style.zIndex = "auto";
         scrollbarHideObserverRef.current.style.display = "none";
     }, []);
+
+    // Handle scrollbar opacity during scrolling
+    React.useEffect(() => {
+        if (!viewRef.current) return;
+
+        const viewport = viewRef.current.getElementsByClassName("xterm-viewport")[0] as HTMLElement;
+        if (!viewport) return;
+
+        const handleScroll = () => {
+            // Add scrolling class when user scrolls
+            viewport.classList.add("scrolling");
+
+            // Clear existing timeout
+            if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current);
+            }
+
+            // Remove scrolling class after scroll stops (300ms delay)
+            scrollTimeoutRef.current = setTimeout(() => {
+                viewport.classList.remove("scrolling");
+            }, 300);
+        };
+
+        viewport.addEventListener("scroll", handleScroll, { passive: true });
+        viewport.addEventListener("wheel", handleScroll, { passive: true });
+
+        return () => {
+            viewport.removeEventListener("scroll", handleScroll);
+            viewport.removeEventListener("wheel", handleScroll);
+            if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current);
+            }
+        };
+    }, [viewRef]);
 
     const stickerConfig = {
         charWidth: 8,

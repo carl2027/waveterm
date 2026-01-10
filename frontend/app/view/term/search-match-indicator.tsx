@@ -143,7 +143,7 @@ const SearchMatchIndicator: React.FC<SearchMatchIndicatorProps> = ({
             className="search-match-indicator"
             style={{
                 position: "absolute",
-                right: "9px", // Align with scrollbar position
+                right: "8px", // Align with scrollbar position
                 top: "0",
                 bottom: "0",
                 width: "6px", // Match scrollbar width

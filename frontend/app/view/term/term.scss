@@ -161,6 +161,7 @@
 
             &::-webkit-scrollbar-thumb {
                 display: none;
+                // Use original CSS variables for default and hover states
                 background-color: var(--scrollbar-thumb-color);
                 border-radius: 4px;
                 margin: 0 1px 0 1px;
@@ -171,6 +172,19 @@
 
                 &:active {
                     background-color: var(--scrollbar-thumb-active-color);
+                }
+            }
+
+            // Increase opacity when scrolling
+            &.scrolling::-webkit-scrollbar-thumb {
+                background-color: rgba(255, 255, 255, 0.5); // More opaque when scrolling
+
+                &:hover {
+                    background-color: rgba(255, 255, 255, 0.6);
+                }
+
+                &:active {
+                    background-color: rgba(255, 255, 255, 0.7);
                 }
             }
         }
