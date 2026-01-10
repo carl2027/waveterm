@@ -129,12 +129,70 @@ const SearchMatchIndicator: React.FC<SearchMatchIndicatorProps> = ({
     const totalLines = buffer.length;
 
     // Calculate the position of each match marker
-    const markers = matchLines.map((line) => {
+    const markers = matchLines.map((line, index) => {
         // Convert scrollback line to buffer line
         const bufferLine = totalLines - 1 - line;
         // Calculate position as percentage (0 = top, 100 = bottom)
         const position = totalLines > 1 ? (bufferLine / (totalLines - 1)) * 100 : 50;
-        return { line, position, bufferLine };
+        return { line, position, bufferLine, originalIndex: index };
+    });
+
+    // Merge nearby markers into blocks
+    // Threshold: if markers are within 0.5% of position, merge them
+    const MERGE_THRESHOLD = 0.5;
+    const mergedBlocks: Array<{
+        startPosition: number;
+        endPosition: number;
+        startLine: number;
+        endLine: number;
+        startIndex: number;
+        endIndex: number;
+        containsActive: boolean;
+    }> = [];
+
+    if (markers.length > 0) {
+        let currentBlock = {
+            startPosition: markers[0].position,
+            endPosition: markers[0].position,
+            startLine: markers[0].line,
+            endLine: markers[0].line,
+            startIndex: markers[0].originalIndex,
+            endIndex: markers[0].originalIndex,
+            containsActive: false,
+        };
+
+        for (let i = 1; i < markers.length; i++) {
+            const prevMarker = markers[i - 1];
+            const currMarker = markers[i];
+            const positionDiff = Math.abs(currMarker.position - prevMarker.position);
+
+            if (positionDiff <= MERGE_THRESHOLD) {
+                // Merge into current block
+                currentBlock.endPosition = currMarker.position;
+                currentBlock.endLine = currMarker.line;
+                currentBlock.endIndex = currMarker.originalIndex;
+            } else {
+                // Save current block and start a new one
+                mergedBlocks.push(currentBlock);
+                currentBlock = {
+                    startPosition: currMarker.position,
+                    endPosition: currMarker.position,
+                    startLine: currMarker.line,
+                    endLine: currMarker.line,
+                    startIndex: currMarker.originalIndex,
+                    endIndex: currMarker.originalIndex,
+                    containsActive: false,
+                };
+            }
+        }
+        // Don't forget the last block
+        mergedBlocks.push(currentBlock);
+    }
+
+    // Check which blocks contain the active match
+    mergedBlocks.forEach((block) => {
+        const activeIndex = activeMatchIndex - 1; // Convert to 0-based
+        block.containsActive = totalMatches > 0 && activeIndex >= block.startIndex && activeIndex <= block.endIndex;
     });
 
     return (
@@ -143,29 +201,33 @@ const SearchMatchIndicator: React.FC<SearchMatchIndicatorProps> = ({
             className="search-match-indicator"
             style={{
                 position: "absolute",
-                right: "8px", // Align with scrollbar position
+                right: "5px", // Align with scrollbar position (same as xterm-viewport right: 0)
                 top: "0",
                 bottom: "0",
-                width: "6px", // Match scrollbar width
+                width: "5px", // Match scrollbar width
                 zIndex: 7, // Below scrollbar overlay but above terminal decorations
                 pointerEvents: "none", // Let clicks pass through to scrollbar, but markers will have pointerEvents: auto
             }}
         >
-            {markers.map((marker, index) => {
-                // activeMatchIndex is 1-based, matchLines is 0-based
-                const isActive = totalMatches > 0 && index === activeMatchIndex - 1;
+            {mergedBlocks.map((block, blockIndex) => {
+                const topPosition = Math.max(0, Math.min(100, block.startPosition));
+                const matchCount = block.endIndex - block.startIndex + 1;
+                const isActive = block.containsActive;
+                // Use fixed height: 3px for single match, 4px for multiple matches
+                const height = matchCount === 1 ? "3px" : "4px";
+
                 return (
                     <div
-                        key={`${marker.line}-${index}`}
+                        key={`block-${block.startLine}-${block.endLine}-${blockIndex}`}
                         className={clsx("search-match-marker", { active: isActive })}
                         style={{
                             position: "absolute",
-                            top: `${Math.max(0, Math.min(100, marker.position))}%`,
+                            top: `${topPosition}%`,
                             left: "0",
-                            width: "6px", // Full width to match scrollbar
-                            height: "3px", // Slightly taller for better visibility
-                            backgroundColor: isActive ? "#FF9632" : "#FFFF00",
-                            opacity: 0.9, // High opacity for visibility through scrollbar
+                            width: "5px", // Full width to match scrollbar
+                            height: height, // Fixed height to avoid oversized blocks
+                            backgroundColor: "#FFFF00", // Consistent color for all matches
+                            opacity: 0.4, // More transparent for subtle indication
                             cursor: "pointer",
                             transition: "background-color 0.2s, opacity 0.2s",
                             pointerEvents: "auto", // Enable clicks on markers
@@ -174,17 +236,22 @@ const SearchMatchIndicator: React.FC<SearchMatchIndicatorProps> = ({
                         }}
                         onClick={(e) => {
                             e.stopPropagation(); // Prevent scrollbar interaction
-                            handleMarkerClick(marker.line, index);
+                            // Navigate to the first match in the block
+                            handleMarkerClick(block.startLine, block.startIndex);
                         }}
                         onMouseEnter={(e) => {
                             // Increase opacity on hover for better visibility
-                            e.currentTarget.style.opacity = "1";
+                            e.currentTarget.style.opacity = "0.9";
                         }}
                         onMouseLeave={(e) => {
                             // Restore opacity on leave
-                            e.currentTarget.style.opacity = isActive ? "0.95" : "0.9";
+                            e.currentTarget.style.opacity = "0.4";
                         }}
-                        title={`Match ${index + 1} of ${matchLines.length} (line ${marker.line + 1})`}
+                        title={
+                            matchCount > 1
+                                ? `${matchCount} matches (lines ${block.startLine + 1}-${block.endLine + 1})`
+                                : `Match ${block.startIndex + 1} of ${matchLines.length} (line ${block.startLine + 1})`
+                        }
                     />
                 );
             })}

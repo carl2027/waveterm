@@ -59,8 +59,16 @@
         min-height: 0;
         overflow: hidden;
         line-height: 1;
-        margin: 5px;
+        margin-top: 5px;
+        margin-bottom: 5px;
         margin-left: 4px;
+        margin-right: 0; // Remove margin-right, use padding-right instead
+        position: relative; // Ensure positioning context for absolute children
+        // Use padding-right instead of margin-right to ensure fixed spacing
+        // Padding is part of the element's box model and won't be compressed by flexbox
+        // This ensures the scrollbar maintains a consistent right spacing regardless of window width
+        padding-right: 5px; // Fixed padding to maintain scrollbar right spacing
+        box-sizing: border-box; // Ensure padding is included in width calculation
     }
 
     .term-htmlelem {
@@ -147,6 +155,10 @@
     }
 
     .terminal {
+        // Ensure terminal container respects parent margin
+        width: 100%;
+        height: 100%;
+
         .xterm-viewport {
             &::-webkit-scrollbar {
                 width: 6px;
