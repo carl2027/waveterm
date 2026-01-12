@@ -208,15 +208,25 @@
         }
     }
 
-    // Search match indicator styles
-    .search-match-indicator {
-        .search-match-marker {
-            // Ensure markers are visible even when scrollbar is over them
-            box-shadow: 0 0 2px rgba(255, 255, 0, 0.5);
+    // Overview ruler styles for xterm search decorations
+    // Ensure overview ruler is visible and positioned correctly
+    // The overview ruler should be positioned to the left of the scrollbar
+    :global(.xterm-decoration-overview-ruler) {
+        width: 15px !important;
+        min-width: 15px;
+        height: 100% !important;
+        background-color: rgba(0, 0, 0, 0.3) !important;
+        border-left: 1px solid rgba(255, 255, 255, 0.3) !important;
+        z-index: 7 !important; // Below scrollbar overlay but above decorations
+        right: 6px !important; // Position to the left of scrollbar (scrollbar is 6px wide)
+        display: block !important;
+        visibility: visible !important;
+    }
 
-            &.active {
-                box-shadow: 0 0 3px rgba(255, 150, 50, 0.7);
-            }
-        }
+    // Style for individual overview ruler markers
+    :global(.xterm-decoration-overview-ruler .xterm-decoration) {
+        width: 100% !important;
+        height: 2px !important;
+        min-height: 2px !important;
     }
 }

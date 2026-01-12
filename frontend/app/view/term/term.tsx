@@ -15,7 +15,6 @@ import clsx from "clsx";
 import debug from "debug";
 import * as jotai from "jotai";
 import * as React from "react";
-import { SearchMatchIndicator } from "./search-match-indicator";
 import { TermStickers } from "./termsticker";
 import { TermThemeUpdater } from "./termtheme";
 import { computeTheme } from "./termutil";
@@ -185,14 +184,15 @@ const TerminalView = ({ blockId, model }: ViewComponentProps<TermViewModel>) => 
     const wholeWord = useAtomValueSafe<boolean>(searchProps.wholeWord);
     const regex = useAtomValueSafe<boolean>(searchProps.regex);
     const searchVal = jotai.useAtomValue<string>(searchProps.searchValue);
-    const searchResultsIndex = jotai.useAtomValue<number>(searchProps.resultsIndex);
-    const searchResultsCount = jotai.useAtomValue<number>(searchProps.resultsCount);
     const searchDecorations = React.useMemo(
         () => ({
-            matchOverviewRuler: "#000000",
-            activeMatchColorOverviewRuler: "#000000",
+            matchOverviewRuler: "#FFFF00", // Yellow for all matches
+            activeMatchColorOverviewRuler: "#FF9632", // Orange for active match
             activeMatchBorder: "#FF9632",
             matchBorder: "#FFFF00",
+            // Optional: add background colors for better visibility
+            matchBackground: undefined, // Let xterm use default
+            activeMatchBackground: undefined, // Let xterm use default
         }),
         []
     );
@@ -279,6 +279,7 @@ const TerminalView = ({ blockId, model }: ViewComponentProps<TermViewModel>) => 
                 allowTransparency: true,
                 scrollback: termScrollback,
                 allowProposedApi: true, // Required by @xterm/addon-search to enable search functionality and decorations
+                overviewRulerWidth: 15, // Enable overview ruler for search match indicators
                 ignoreBracketedPasteMode: !termAllowBPM,
                 macOptionIsMeta: termMacOptionIsMeta,
             },
@@ -404,15 +405,6 @@ const TerminalView = ({ blockId, model }: ViewComponentProps<TermViewModel>) => 
                     className="term-scrollbar-hide-observer"
                     onPointerOver={onScrollbarHideObserver}
                 />
-                {searchIsOpen && searchVal && (
-                    <SearchMatchIndicator
-                        terminal={model.termRef.current?.terminal ?? null}
-                        searchText={searchVal}
-                        searchOpts={searchOpts}
-                        activeMatchIndex={searchResultsIndex + 1}
-                        totalMatches={searchResultsCount}
-                    />
-                )}
             </div>
             <Search {...searchProps} />
         </div>
