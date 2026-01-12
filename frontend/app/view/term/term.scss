@@ -59,8 +59,16 @@
         min-height: 0;
         overflow: hidden;
         line-height: 1;
-        margin: 5px;
+        margin-top: 5px;
+        margin-bottom: 5px;
         margin-left: 4px;
+        margin-right: 0; // Remove margin-right, use padding-right instead
+        position: relative; // Ensure positioning context for absolute children
+        // Use padding-right instead of margin-right to ensure fixed spacing
+        // Padding is part of the element's box model and won't be compressed by flexbox
+        // This ensures the scrollbar maintains a consistent right spacing regardless of window width
+        padding-right: 5px; // Fixed padding to maintain scrollbar right spacing
+        box-sizing: border-box; // Ensure padding is included in width calculation
     }
 
     .term-htmlelem {
@@ -147,6 +155,10 @@
     }
 
     .terminal {
+        // Ensure terminal container respects parent margin
+        width: 100%;
+        height: 100%;
+
         .xterm-viewport {
             &::-webkit-scrollbar {
                 width: 6px;
@@ -154,11 +166,14 @@
             }
 
             &::-webkit-scrollbar-track {
+                // Make track slightly transparent so search match indicators are visible
                 background-color: var(--scrollbar-background-color);
+                opacity: 0.4; // Allow search match indicators to show through
             }
 
             &::-webkit-scrollbar-thumb {
                 display: none;
+                // Use original CSS variables for default and hover states
                 background-color: var(--scrollbar-thumb-color);
                 border-radius: 4px;
                 margin: 0 1px 0 1px;
@@ -171,6 +186,19 @@
                     background-color: var(--scrollbar-thumb-active-color);
                 }
             }
+
+            // Increase opacity when scrolling
+            &.scrolling::-webkit-scrollbar-thumb {
+                background-color: rgba(255, 255, 255, 0.5); // More opaque when scrolling
+
+                &:hover {
+                    background-color: rgba(255, 255, 255, 0.6);
+                }
+
+                &:active {
+                    background-color: rgba(255, 255, 255, 0.7);
+                }
+            }
         }
 
         &:hover {
@@ -178,5 +206,27 @@
                 display: block;
             }
         }
+    }
+
+    // Overview ruler styles for xterm search decorations
+    // Ensure overview ruler is visible and positioned correctly
+    // The overview ruler should be positioned to the left of the scrollbar
+    :global(.xterm-decoration-overview-ruler) {
+        width: 15px !important;
+        min-width: 15px;
+        height: 100% !important;
+        background-color: rgba(0, 0, 0, 0.3) !important;
+        border-left: 1px solid rgba(255, 255, 255, 0.3) !important;
+        z-index: 7 !important; // Below scrollbar overlay but above decorations
+        right: 6px !important; // Position to the left of scrollbar (scrollbar is 6px wide)
+        display: block !important;
+        visibility: visible !important;
+    }
+
+    // Style for individual overview ruler markers
+    :global(.xterm-decoration-overview-ruler .xterm-decoration) {
+        width: 100% !important;
+        height: 2px !important;
+        min-height: 2px !important;
     }
 }
